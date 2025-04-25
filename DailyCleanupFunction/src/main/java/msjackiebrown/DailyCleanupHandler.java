@@ -2,11 +2,13 @@ package msjackiebrown;
 
 import msjackiebrown.helpers.S3ClientHelper;
 import msjackiebrown.helpers.SnsClientHelper;
+import msjackiebrown.helpers.CloudWatchHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -18,12 +20,15 @@ public class DailyCleanupHandler {
 
     private final S3ClientHelper s3Helper;
     private final SnsClientHelper snsHelper;
+    private final CloudWatchHelper cloudWatchHelper;
 
     public DailyCleanupHandler() {
         S3Client s3Client = S3Client.create();
         SnsClient snsClient = SnsClient.create();
+        CloudWatchClient cloudWatchClient = CloudWatchClient.create();
         this.s3Helper = new S3ClientHelper(s3Client);
         this.snsHelper = new SnsClientHelper(snsClient);
+        this.cloudWatchHelper = new CloudWatchHelper(cloudWatchClient);
     }
 
     public String handleRequest() {
@@ -61,17 +66,24 @@ public class DailyCleanupHandler {
             // List and delete objects
             List<S3Object> objects = s3Helper.listObjects(bucketName);
             StringBuilder response = new StringBuilder("Deleted objects from bucket " + bucketName + ":\n");
-            boolean filesDeleted = false;
+            int filesDeleted = 0;
+            long totalBytesDeleted = 0;
 
             for (S3Object s3Object : objects) {
                 if (s3Object.lastModified().isBefore(cutoffTime)) {
                     s3Helper.deleteObject(bucketName, s3Object.key());
                     response.append(s3Object.key()).append("\n");
-                    filesDeleted = true;
+                    filesDeleted++;
+                    totalBytesDeleted += s3Object.size();
                 }
             }
 
-            if (!filesDeleted) {
+            // Publish metrics
+            if (filesDeleted > 0) {
+                cloudWatchHelper.publishMetrics(bucketName, filesDeleted, totalBytesDeleted);
+                response.append(String.format("Deleted %d files (total size: %d bytes)\n", 
+                    filesDeleted, totalBytesDeleted));
+            } else {
                 response.append("No files to delete.");
             }
 
@@ -89,4 +101,5 @@ public class DailyCleanupHandler {
             return "Error processing request: " + e.getMessage();
         }
     }
+    
 }
