@@ -3,8 +3,8 @@ package msjackiebrown;
 import msjackiebrown.helpers.S3ClientHelper;
 import msjackiebrown.helpers.SnsClientHelper;
 import msjackiebrown.helpers.CloudWatchHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.sns.SnsClient;
@@ -16,7 +16,7 @@ import java.util.List;
 
 public class DailyCleanupHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(DailyCleanupHandler.class);
+    private static final Logger logger = LogManager.getLogger(DailyCleanupHandler.class);
 
     private final S3ClientHelper s3Helper;
     private final SnsClientHelper snsHelper;
