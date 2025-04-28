@@ -12,7 +12,12 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class DailyCleanupHandler {
 
@@ -21,7 +26,8 @@ public class DailyCleanupHandler {
     private final S3ClientHelper s3Helper;
     private final SnsClientHelper snsHelper;
     private final CloudWatchHelper cloudWatchHelper;
-    private boolean dryRun = false;  // Add this line
+    private boolean dryRun = false;
+    private Set<String> fileTypes = new HashSet<>();
 
     // Add getter/setter
     public void setDryRun(boolean dryRun) {
@@ -37,9 +43,34 @@ public class DailyCleanupHandler {
         this.cloudWatchHelper = new CloudWatchHelper(cloudWatchClient);
     }
 
+    private void initializeFileTypes() {
+        String fileTypesEnv = System.getenv("FILE_TYPES");
+        if (fileTypesEnv != null && !fileTypesEnv.isEmpty()) {
+            fileTypes.addAll(Arrays.asList(fileTypesEnv.split(","))
+                .stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet()));
+            logger.info("File types to clean up: {}", fileTypes);
+        }
+    }
+
+    private boolean shouldDeleteFile(String fileName) {
+        // If no file types specified, process all files
+        if (fileTypes.isEmpty()) {
+            return true;
+        }
+        
+        return fileTypes.stream()
+            .anyMatch(type -> fileName.toLowerCase().endsWith(type.toLowerCase()));
+    }
+
     public String handleRequest() {
         try {
             logger.info("Starting daily cleanup process...");
+
+            // Initialize file type filters
+            initializeFileTypes();
 
             // Read environment variables
             String bucketName = System.getenv("BUCKET_NAME");
@@ -86,7 +117,8 @@ public class DailyCleanupHandler {
             long totalBytesDeleted = 0;
 
             for (S3Object s3Object : objects) {
-                if (s3Object.lastModified().isBefore(cutoffTime)) {
+                if (s3Object.lastModified().isBefore(cutoffTime) 
+                    && shouldDeleteFile(s3Object.key())) {
                     if (!dryRun) {
                         s3Helper.deleteObject(bucketName, s3Object.key());
                     }
