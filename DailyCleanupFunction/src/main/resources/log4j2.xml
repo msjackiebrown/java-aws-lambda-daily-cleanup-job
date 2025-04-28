@@ -1,17 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Appenders>
-        <Lambda name="Lambda">
+        <Console name="Lambda" target="SYSTEM_OUT">
             <PatternLayout>
-                <pattern>%d{yyyy-MM-dd HH:mm:ss} %X{AWSRequestId} %-5p %c{1}:%L - %m%n</pattern>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %X{AWSRequestId} %-5p %c{1.}:%L - %m%n</pattern>
             </PatternLayout>
-        </Lambda>
+        </Console>
     </Appenders>
     <Loggers>
         <Root level="INFO">
             <AppenderRef ref="Lambda"/>
         </Root>
         <Logger name="msjackiebrown" level="DEBUG" additivity="false">
+            <AppenderRef ref="Lambda"/>
+        </Logger>
+        <!-- AWS SDK v2 logging -->
+        <Logger name="software.amazon.awssdk" level="WARN" additivity="false">
             <AppenderRef ref="Lambda"/>
         </Logger>
     </Loggers>
