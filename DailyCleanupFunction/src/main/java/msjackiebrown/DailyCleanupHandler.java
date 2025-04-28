@@ -91,7 +91,10 @@ public class DailyCleanupHandler {
                         s3Helper.deleteObject(bucketName, s3Object.key());
                     }
                     response.append(dryRun ? "[WOULD DELETE] " : "[DELETED] ")
-                           .append(s3Object.key()).append("\n");
+                           .append(String.format("%s (last modified: %s)", 
+                               s3Object.key(), 
+                               s3Object.lastModified().toString()))
+                           .append("\n");
                     filesDeleted++;
                     totalBytesDeleted += s3Object.size();
                 }
