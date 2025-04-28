@@ -12,6 +12,7 @@ Globals:
         BUCKET_NAME: daily-cleanup-bucket
         DAYS: "30"
         SNS_TOPIC_ARN: !Ref DailyCleanupSNSTopic
+        DRY_RUN: "false"  # Add this line - set to "true" for dry-run mode
 
 Resources:
   DailyCleanupSNSTopic:
