@@ -112,8 +112,8 @@ public class DailyCleanupHandler {
                 totalBytesDeleted
             ));
 
-            logger.info("Cleanup completed successfully.");
             logger.info("Response: {}", response.toString());
+            logger.info("Cleanup completed successfully.");
             return response.toString();
 
         } catch (Exception e) {
