@@ -6,6 +6,7 @@ An AWS Lambda function that automatically cleans up old files from an S3 bucket 
 
 - Deletes files older than specified number of days from S3 bucket
 - Supports dry-run mode to preview deletions without making changes
+- Filters files by extension (e.g., .log, .tmp, .bak files)
 - Sends SNS notifications on failures
 - Publishes CloudWatch metrics for monitoring
 - Scheduled to run daily at midnight UTC
@@ -70,6 +71,23 @@ java-daily-cleanup-job/
 - `DAYS`: Number of days to retain files (files older than this will be deleted)
 - `SNS_TOPIC_ARN`: ARN of SNS topic for notifications
 - `DRY_RUN`: Set to "true" to enable dry-run mode (default: "false")
+- `FILE_TYPES`: Comma-separated list of file extensions to clean up (e.g., ".log,.tmp,.bak"). If not set, all files are processed
+
+## Configuration Examples
+
+### Clean up only log files older than 30 days:
+```sh
+BUCKET_NAME=my-bucket
+DAYS=30
+FILE_TYPES=.log
+```
+
+### Clean up temporary and backup files older than 7 days:
+```sh
+BUCKET_NAME=my-bucket
+DAYS=7
+FILE_TYPES=.tmp,.bak
+```
 
 ## Building
 
