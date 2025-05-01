@@ -1,50 +1,46 @@
-# Daily S3 Cleanup Lambda Function
+# S3 Cleanup Lambda Function
 
-An AWS Lambda function that automatically cleans up old files from an S3 bucket based on configurable age threshold.
+> Automatically clean up old files from an S3 bucket based on configurable rules and schedules.
 
-## Features
+## 📋 Quick Start
 
-- Deletes files older than specified number of days from S3 bucket
-- Supports dry-run mode to preview deletions without making changes
-- Filters files by extension (e.g., .log, .tmp, .bak files)
-- Sends SNS notifications on failures
-- Publishes CloudWatch metrics for monitoring
-- Scheduled to run daily at midnight UTC
+```bash
+# 1. Build the project
+cd DailyCleanupFunction
+mvn clean package
 
-## Project Architecture
+# 2. Deploy with default settings (midnight UTC)
+sam build
+sam deploy --guided
+```
 
-### Component Overview
+## ✨ Features
+
+- 🗑️ Automatic deletion of old files from S3 buckets
+- ⏰ Configurable cleanup schedules
+- 🔍 Dry-run mode for previewing changes
+- 🔎 File filtering by extension (e.g., .log, .tmp, .bak)
+- 📩 SNS notifications for failures
+- 📊 CloudWatch metrics for monitoring
+
+## 🏗️ Architecture
+
+### Components
 ```
 java-daily-cleanup-job/
 ├── DailyCleanupFunction/
-│   ├── src/
-│   │   └── main/
-│   │       └── java/
-│   │           └── msjackiebrown/
-│   │               ├── DailyCleanupHandler.java    # Main Lambda handler
-│   │               └── helpers/
-│   │                   ├── S3ClientHelper.java      # S3 operations
-│   │                   ├── SnsClientHelper.java     # SNS notifications
-│   │                   └── CloudWatchHelper.java    # Metrics publishing
-│   ├── pom.xml                                     # Maven configuration
-│   └── template.yaml                               # SAM template
+│   ├── src/main/java/msjackiebrown/
+│   │   ├── DailyCleanupHandler.java    # Main Lambda handler
+│   │   └── helpers/
+│   │       ├── S3ClientHelper.java      # S3 operations
+│   │       ├── SnsClientHelper.java     # SNS notifications
+│   │       └── CloudWatchHelper.java    # Metrics publishing
+│   ├── pom.xml                         # Maven configuration
+│   └── template.yaml                   # SAM template
 └── README.md
 ```
 
-### Architectural Flow
-1. **CloudWatch Event** triggers the Lambda function daily
-2. **DailyCleanupHandler**:
-   - Validates environment variables
-   - Calculates cutoff time based on DAYS parameter
-   - Lists objects from S3 bucket
-3. **S3ClientHelper**:
-   - Lists and deletes objects from S3
-4. **CloudWatchHelper**:
-   - Publishes metrics about deleted files
-5. **SnsClientHelper**:
-   - Sends notifications on failures
-
-### AWS Services Integration
+### Flow Diagram
 ```
 ┌─────────────────┐    ┌─────────────────┐
 │ CloudWatch Event│───>│  Lambda Function │
@@ -57,106 +53,124 @@ java-daily-cleanup-job/
              └──────────┘ └──────────┘ └────────┘
 ```
 
-## Prerequisites
+## 🛠️ Prerequisites
 
-- Java 21
-- Maven
-- AWS CLI
-- AWS SAM CLI
-- An AWS account with appropriate permissions
+- ☕ Java 21
+- 📦 Maven
+- 🔧 AWS CLI
+- 🔨 AWS SAM CLI
+- 💳 AWS Account with appropriate permissions
 
-## Environment Variables
+## ⚙️ Configuration
 
-- `BUCKET_NAME`: Name of the S3 bucket to clean up
-- `DAYS`: Number of days to retain files (files older than this will be deleted)
-- `SNS_TOPIC_ARN`: ARN of SNS topic for notifications
-- `DRY_RUN`: Set to "true" to enable dry-run mode (default: "false")
-- `FILE_TYPES`: Comma-separated list of file extensions to clean up (e.g., ".log,.tmp,.bak"). If not set, all files are processed
-- `PREFIXES`: Comma-separated list of S3 prefixes/folders to clean up (e.g., "logs/,temp/"). If not set, all folders are processed
+### Environment Variables
 
-## Configuration Examples
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BUCKET_NAME` | S3 bucket to clean | *Required* |
+| `DAYS` | Retention period in days | *Required* |
+| `SNS_TOPIC_ARN` | SNS topic for notifications | *Required* |
+| `DRY_RUN` | Preview mode | `false` |
+| `FILE_TYPES` | Extensions to clean (`.log,.tmp`) | All files |
+| `PREFIXES` | Folders to clean (`logs/,temp/`) | All folders |
+| `CLEANUP_SCHEDULE` | Cron schedule | `cron(0 0 * * ? *)` |
 
-### Clean up only log files older than 30 days:
-```sh
-BUCKET_NAME=my-bucket
-DAYS=30
-FILE_TYPES=.log
+### Schedule Examples
+
+```bash
+# Daily at midnight UTC
+CLEANUP_SCHEDULE="cron(0 0 * * ? *)"
+
+# Every 6 hours
+CLEANUP_SCHEDULE="cron(0 */6 * * ? *)"
+
+# Weekdays at 8am UTC
+CLEANUP_SCHEDULE="cron(0 8 ? * MON-FRI *)"
 ```
 
-### Clean up temporary and backup files older than 7 days:
-```sh
-BUCKET_NAME=my-bucket
-DAYS=7
-FILE_TYPES=.tmp,.bak
+### Common Use Cases
+
+1. **Log File Cleanup (30 days)**
+   ```bash
+   BUCKET_NAME=my-bucket
+   DAYS=30
+   FILE_TYPES=.log
+   ```
+
+2. **Temp File Cleanup (7 days)**
+   ```bash
+   BUCKET_NAME=my-bucket
+   DAYS=7
+   FILE_TYPES=.tmp,.bak
+   ```
+
+3. **Archive Cleanup (90 days)**
+   ```bash
+   BUCKET_NAME=my-bucket
+   DAYS=90
+   PREFIXES=archive/2023/,archive/2022/
+   ```
+
+## 📦 Deployment
+
+### Using SAM CLI
+
+```bash
+# Windows CMD
+sam deploy --parameter-overrides CleanupSchedule="cron(0 12 * * ? *)"
+
+# PowerShell
+sam deploy --parameter-overrides CleanupSchedule='cron(0 12 * * ? *)'
 ```
 
-### Clean up log files in specific folders:
-```sh
-BUCKET_NAME=my-bucket
-DAYS=30
-PREFIXES=logs/system/,logs/application/
-FILE_TYPES=.log
+### Using samconfig.toml
+```toml
+version = 0.1
+[default.deploy.parameters]
+stack_name = "java-daily-cleanup-job"
+resolve_s3 = true
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = [
+    "CleanupSchedule=\"cron(0 12 * * ? *)\""
+]
 ```
 
-### Clean up temporary files in staging area:
-```sh
-BUCKET_NAME=my-bucket
-DAYS=1
-PREFIXES=temp/staging/
-FILE_TYPES=.tmp
-```
+## 🧪 Testing
 
-### Clean up all files in archive folders older than 90 days:
-```sh
-BUCKET_NAME=my-bucket
-DAYS=90
-PREFIXES=archive/2023/,archive/2022/
-```
-
-### Preview deletion of log files (dry run):
-```sh
-BUCKET_NAME=my-bucket
-DAYS=30
-FILE_TYPES=.log
-DRY_RUN=true
-```
-
-## Building
-
-Build the project using Maven:
-
-```sh
-cd DailyCleanupFunction
-mvn clean package
-```
-
-## Deployment
-
-Deploy using AWS SAM:
-
-```sh
-sam build
-sam deploy --guided
-```
-
-## Testing
-
-Run tests using Maven:
-
-```sh
+```bash
+# Run unit tests
 mvn test
+
+# Local testing
+sam local invoke -e events/schedule-test.json
 ```
 
-## IAM Permissions
+## 🔐 IAM Permissions
 
-The function requires these AWS permissions:
-- S3: ListBucket, GetObject, DeleteObject
-- SNS: Publish
-- CloudWatch: PutMetricData
-- CloudWatch Logs: CreateLogGroup, CreateLogStream, PutLogEvents
+Required AWS permissions:
+- **S3**: `ListBucket`, `GetObject`, `DeleteObject`
+- **SNS**: `Publish`
+- **CloudWatch**: `PutMetricData`
+- **CloudWatch Logs**: `CreateLogGroup`, `CreateLogStream`, `PutLogEvents`
+- **EventBridge**: `PutRule`
 
-## Monitoring
+## 📊 Monitoring
 
-The function publishes these CloudWatch metrics under the "S3DailyCleanup" namespace:
-- FilesDeleted: Number of files deleted
-- BytesDeleted: Total size of deleted files
+CloudWatch metrics (`S3DailyCleanup` namespace):
+- `FilesDeleted`: Number of files deleted
+- `BytesDeleted`: Total size of deleted files
+
+## 🌐 Configuration Web Interface
+
+Visit our web interface for easy configuration:
+```
+https://msjackiebrown.github.io/java-daily-cleanup-job/
+```
+
+Features:
+- 📝 Plain English schedule configuration
+- 🎯 Bucket and retention settings
+- ⚡ Instant cron expression generation
+- 📋 Deployment command previews

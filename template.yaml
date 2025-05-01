@@ -12,9 +12,17 @@ Globals:
         BUCKET_NAME: daily-cleanup-bucket
         DAYS: "30"
         SNS_TOPIC_ARN: !Ref DailyCleanupSNSTopic
-        DRY_RUN: "false"  # Add this line - set to "true" for dry-run mode
-        FILE_TYPES: ".log,.tmp,.bak"  # Add this line
-        PREFIXES: "logs/,temp/,backup/"  # Add this line
+        DRY_RUN: "false"
+        FILE_TYPES: ".log,.tmp,.bak"
+        PREFIXES: "logs/,temp/,backup/"
+        CLEANUP_SCHEDULE: "cron(0 0 * * ? *)"  # Default: midnight UTC, but can be overridden
+
+Parameters:
+  CleanupSchedule:
+    Type: String
+    Default: "cron(0 0 * * ? *)"
+    Description: "Cron expression for cleanup schedule (default: daily at midnight UTC)"
+    AllowedPattern: "cron\\([0-9*/, -?]+\\)"
 
 Resources:
   DailyCleanupSNSTopic:
@@ -29,13 +37,16 @@ Resources:
         - x86_64
       MemorySize: 512
       Role: !GetAtt DailyCleanupFunctionRole.Arn
+      Environment:
+        Variables:
+          CLEANUP_SCHEDULE: !Ref CleanupSchedule
       Events:
         ScheduledEvent:
           Type: Schedule
           Properties:
-            Schedule: cron(0 0 * * ? *) # Runs every day at midnight UTC
-            Name: DailyCleanupAtMidnight
-            Description: "Triggers the daily cleanup Lambda function every day at midnight"
+            Schedule: !Ref CleanupSchedule
+            Name: DailyCleanup
+            Description: "Triggers the cleanup Lambda function based on configured schedule"
   DailyCleanupFunctionRole:
     Type: AWS::IAM::Role
     Properties:

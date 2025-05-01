@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>S3 Cleanup Function Configuration</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], 
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .output {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+    </style>
+</head>
+<body>
+    <h1>S3 Cleanup Function Configuration</h1>
+    
+    <div class="form-group">
+        <label for="schedule">Schedule Pattern:</label>
+        <select id="schedule">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="hourly">Every few hours</option>
+            <option value="workdays">Workdays only</option>
+        </select>
+    </div>
+
+    <div class="form-group" id="timeOptions">
+        <label for="time">Time of day:</label>
+        <input type="text" id="time" placeholder="e.g. 2:30 PM UTC">
+    </div>
+
+    <div class="form-group" id="hourlyOptions" style="display: none;">
+        <label for="hours">Run every X hours:</label>
+        <input type="number" id="hours" min="1" max="23" value="6">
+    </div>
+
+    <div class="form-group">
+        <label for="bucket">S3 Bucket Name:</label>
+        <input type="text" id="bucket" placeholder="my-bucket">
+    </div>
+
+    <div class="form-group">
+        <label for="days">Delete files older than (days):</label>
+        <input type="number" id="days" min="1" value="30">
+    </div>
+
+    <div class="form-group">
+        <label for="fileTypes">File Types to Clean (comma-separated):</label>
+        <input type="text" id="fileTypes" placeholder=".log,.tmp,.bak">
+    </div>
+
+    <div class="form-group">
+        <label for="prefixes">Folders to Clean (comma-separated):</label>
+        <input type="text" id="prefixes" placeholder="logs/,temp/,backup/">
+    </div>
+
+    <button onclick="generateConfig()">Generate Configuration</button>
+
+    <h2>Generated Configuration:</h2>
+    <pre class="output" id="output"></pre>
+
+    <script>
+        function generateCron(schedule, time, hours) {
+            const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)?\s*UTC$/i;
+            let cron;
+
+            switch(schedule) {
+                case 'daily':
+                    const match = time.match(timeRegex);
+                    if (match) {
+                        let hour = parseInt(match[1]);
+                        const minute = match[2];
+                        const meridiem = match[3];
+                        
+                        if (meridiem) {
+                            if (meridiem.toUpperCase() === 'PM' && hour < 12) hour += 12;
+                            if (meridiem.toUpperCase() === 'AM' && hour === 12) hour = 0;
+                        }
+                        
+                        cron = `cron(${minute} ${hour} * * ? *)`;
+                    } else {
+                        cron = 'cron(0 0 * * ? *)';
+                    }
+                    break;
+                case 'weekly':
+                    cron = 'cron(0 0 ? * MON *)';
+                    break;
+                case 'hourly':
+                    cron = `cron(0 */${hours} * * ? *)`;
+                    break;
+                case 'workdays':
+                    cron = 'cron(0 0 ? * MON-FRI *)';
+                    break;
+                default:
+                    cron = 'cron(0 0 * * ? *)';
+            }
+            return cron;
+        }
+
+        function generateConfig() {
+            const schedule = document.getElementById('schedule').value;
+            const time = document.getElementById('time').value;
+            const hours = document.getElementById('hours').value;
+            const bucket = document.getElementById('bucket').value;
+            const days = document.getElementById('days').value;
+            const fileTypes = document.getElementById('fileTypes').value;
+            const prefixes = document.getElementById('prefixes').value;
+
+            const cron = generateCron(schedule, time, hours);
+
+            const config = `# SAM template parameters:
+CleanupSchedule: ${cron}
+
+# Environment variables:
+BUCKET_NAME: ${bucket}
+DAYS: ${days}
+FILE_TYPES: ${fileTypes}
+PREFIXES: ${prefixes}
+
+# Deploy command:
+sam deploy --parameter-overrides CleanupSchedule="${cron}"
+
+# Plain English Description:
+This function will clean up files from the "${bucket}" bucket
+- Schedule: ${schedule} ${schedule === 'hourly' ? `(every ${hours} hours)` : `at ${time}`}
+- Deletes files older than ${days} days
+- File types: ${fileTypes || 'all files'}
+- In folders: ${prefixes || 'all folders'}`;
+
+            document.getElementById('output').textContent = config;
+        }
+
+        document.getElementById('schedule').addEventListener('change', function(e) {
+            const hourlyOptions = document.getElementById('hourlyOptions');
+            const timeOptions = document.getElementById('timeOptions');
+            
+            if (e.target.value === 'hourly') {
+                hourlyOptions.style.display = 'block';
+                timeOptions.style.display = 'none';
+            } else {
+                hourlyOptions.style.display = 'none';
+                timeOptions.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
