@@ -161,6 +161,66 @@ sam deploy --guided
 sam deploy --parameter-overrides CleanupSchedule="cron(0 12 * * ? *)"
 ```
 
+## Deployment Instructions
+
+### Using SAM CLI
+
+To deploy the function using SAM CLI, use the following command:
+
+```bash
+# For Windows CMD:
+sam deploy --parameter-overrides CleanupSchedule="cron(0 12 * * ? *)"
+
+# For PowerShell:
+sam deploy --parameter-overrides CleanupSchedule='cron(0 12 * * ? *)'
+```
+
+### Using samconfig.toml
+
+Alternatively, you can add these parameters to your `samconfig.toml` file:
+
+```toml
+version = 0.1
+[default.deploy.parameters]
+stack_name = "java-daily-cleanup-job"
+resolve_s3 = true
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = [
+    "CleanupSchedule=\"cron(0 12 * * ? *)\""
+]
+```
+
+### Cron Expression Format
+
+The cleanup job schedule uses AWS CloudWatch Events cron expressions. The format is:
+
+```
+cron(Minutes Hours Day-of-month Month Day-of-week Year)
+```
+
+Common patterns:
+- Daily at noon UTC: `cron(0 12 * * ? *)`
+- Weekly on Monday at midnight: `cron(0 0 ? * MON *)`
+- Every 6 hours: `cron(0 */6 * * ? *)`
+- Workdays at 9 AM: `cron(0 9 ? * MON-FRI *)`
+
+### Configuration Web Interface
+
+For easier configuration, you can use our web interface to generate the correct cron expressions and deployment commands. The interface is available at:
+
+```
+https://msjackiebrown.github.io/java-daily-cleanup-job/
+```
+
+This tool helps you:
+- Select schedule patterns in plain English
+- Configure bucket names and retention periods
+- Generate correct cron expressions
+- View deployment commands
+- Get plain English descriptions of the cleanup job settings
+
 ## Testing
 
 Run tests using Maven:
