@@ -19,13 +19,21 @@ public class S3ClientHelper {
         this.s3Client = s3Client;
     }
 
-    public List<S3Object> listObjects(String bucketName) {
-        ListObjectsV2Request listObjectsRequest = ListObjectsV2Request.builder()
-                .bucket(bucketName)
-                .build();
+    public List<S3Object> listObjects(String bucketName, String prefix) {
+        ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+                .bucket(bucketName);
+                
+        if (prefix != null && !prefix.isEmpty()) {
+            requestBuilder.prefix(prefix);
+        }
 
-        ListObjectsV2Response listObjectsResponse = s3Client.listObjectsV2(listObjectsRequest);
+        ListObjectsV2Response listObjectsResponse = s3Client.listObjectsV2(requestBuilder.build());
         return listObjectsResponse.contents();
+    }
+
+    // Overloaded method for backward compatibility
+    public List<S3Object> listObjects(String bucketName) {
+        return listObjects(bucketName, null);
     }
 
     public void deleteObject(String bucketName, String key) {

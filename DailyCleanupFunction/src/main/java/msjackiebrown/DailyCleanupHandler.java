@@ -28,6 +28,7 @@ public class DailyCleanupHandler {
     private final CloudWatchHelper cloudWatchHelper;
     private boolean dryRun = false;
     private Set<String> fileTypes = new HashSet<>();
+    private Set<String> prefixes = new HashSet<>();
 
     // Add getter/setter
     public void setDryRun(boolean dryRun) {
@@ -55,6 +56,19 @@ public class DailyCleanupHandler {
         }
     }
 
+    private void initializePrefixes() {
+        String prefixesEnv = System.getenv("PREFIXES");
+        if (prefixesEnv != null && !prefixesEnv.isEmpty()) {
+            prefixes.addAll(Arrays.asList(prefixesEnv.split(","))
+                .stream()
+                .map(String::trim)
+                .map(p -> p.endsWith("/") ? p : p + "/")  // Ensure prefixes end with /
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet()));
+            logger.info("Prefixes to clean up: {}", prefixes);
+        }
+    }
+
     private boolean shouldDeleteFile(String fileName) {
         // If no file types specified, process all files
         if (fileTypes.isEmpty()) {
@@ -65,12 +79,25 @@ public class DailyCleanupHandler {
             .anyMatch(type -> fileName.toLowerCase().endsWith(type.toLowerCase()));
     }
 
+    private boolean isInAllowedPrefix(String key) {
+        // If no prefixes specified, process all files
+        if (prefixes.isEmpty()) {
+            return true;
+        }
+        
+        return prefixes.stream()
+            .anyMatch(prefix -> key.startsWith(prefix));
+    }
+
     public String handleRequest() {
         try {
             logger.info("Starting daily cleanup process...");
 
             // Initialize file type filters
             initializeFileTypes();
+
+            // Initialize prefixes
+            initializePrefixes();
 
             // Read environment variables
             String bucketName = System.getenv("BUCKET_NAME");
@@ -118,7 +145,8 @@ public class DailyCleanupHandler {
 
             for (S3Object s3Object : objects) {
                 if (s3Object.lastModified().isBefore(cutoffTime) 
-                    && shouldDeleteFile(s3Object.key())) {
+                    && shouldDeleteFile(s3Object.key())
+                    && isInAllowedPrefix(s3Object.key())) {  // Add this condition
                     if (!dryRun) {
                         s3Helper.deleteObject(bucketName, s3Object.key());
                     }

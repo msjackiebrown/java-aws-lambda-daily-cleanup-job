@@ -72,6 +72,7 @@ java-daily-cleanup-job/
 - `SNS_TOPIC_ARN`: ARN of SNS topic for notifications
 - `DRY_RUN`: Set to "true" to enable dry-run mode (default: "false")
 - `FILE_TYPES`: Comma-separated list of file extensions to clean up (e.g., ".log,.tmp,.bak"). If not set, all files are processed
+- `PREFIXES`: Comma-separated list of S3 prefixes/folders to clean up (e.g., "logs/,temp/"). If not set, all folders are processed
 
 ## Configuration Examples
 
@@ -87,6 +88,37 @@ FILE_TYPES=.log
 BUCKET_NAME=my-bucket
 DAYS=7
 FILE_TYPES=.tmp,.bak
+```
+
+### Clean up log files in specific folders:
+```sh
+BUCKET_NAME=my-bucket
+DAYS=30
+PREFIXES=logs/system/,logs/application/
+FILE_TYPES=.log
+```
+
+### Clean up temporary files in staging area:
+```sh
+BUCKET_NAME=my-bucket
+DAYS=1
+PREFIXES=temp/staging/
+FILE_TYPES=.tmp
+```
+
+### Clean up all files in archive folders older than 90 days:
+```sh
+BUCKET_NAME=my-bucket
+DAYS=90
+PREFIXES=archive/2023/,archive/2022/
+```
+
+### Preview deletion of log files (dry run):
+```sh
+BUCKET_NAME=my-bucket
+DAYS=30
+FILE_TYPES=.log
+DRY_RUN=true
 ```
 
 ## Building
