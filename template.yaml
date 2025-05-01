@@ -15,7 +15,7 @@ Globals:
         DRY_RUN: "false"
         FILE_TYPES: ".log,.tmp,.bak"
         PREFIXES: "logs/,temp/,backup/"
-        CLEANUP_SCHEDULE: "0 0 * * ? *"  # Default: midnight UTC, but can be overridden
+        CLEANUP_SCHEDULE: "cron(0 0 * * ? *)"  # Default: midnight UTC, but can be overridden
 
 Parameters:
   CleanupSchedule:
