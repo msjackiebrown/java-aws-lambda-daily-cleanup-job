@@ -1,15 +1,15 @@
 # Daily S3 Cleanup Lambda Function
 
-An AWS Lambda function that automatically cleans up old files from an S3 bucket based on configurable age threshold.
+An AWS Lambda function that automatically cleans up old files from an S3 bucket based on configurable age threshold and schedule.
 
 ## Features
 
 - Deletes files older than specified number of days from S3 bucket
+- Configurable schedule for cleanup runs
 - Supports dry-run mode to preview deletions without making changes
 - Filters files by extension (e.g., .log, .tmp, .bak files)
 - Sends SNS notifications on failures
 - Publishes CloudWatch metrics for monitoring
-- Scheduled to run daily at midnight UTC
 
 ## Project Architecture
 
@@ -73,6 +73,24 @@ java-daily-cleanup-job/
 - `DRY_RUN`: Set to "true" to enable dry-run mode (default: "false")
 - `FILE_TYPES`: Comma-separated list of file extensions to clean up (e.g., ".log,.tmp,.bak"). If not set, all files are processed
 - `PREFIXES`: Comma-separated list of S3 prefixes/folders to clean up (e.g., "logs/,temp/"). If not set, all folders are processed
+- `CLEANUP_SCHEDULE`: Cron expression for cleanup schedule (default: "cron(0 0 * * ? *)")
+
+## Schedule Examples
+
+### Common Schedule Patterns
+```sh
+# Daily at midnight UTC (default)
+CLEANUP_SCHEDULE="cron(0 0 * * ? *)"
+
+# Every 6 hours
+CLEANUP_SCHEDULE="cron(0 */6 * * ? *)"
+
+# Weekdays at 8am UTC
+CLEANUP_SCHEDULE="cron(0 8 ? * MON-FRI *)"
+
+# Every 2 hours between 9am and 5pm UTC
+CLEANUP_SCHEDULE="cron(0 9-17/2 * * ? *)"
+```
 
 ## Configuration Examples
 
@@ -135,8 +153,12 @@ mvn clean package
 Deploy using AWS SAM:
 
 ```sh
+# Deploy with default schedule (midnight UTC)
 sam build
 sam deploy --guided
+
+# Deploy with custom schedule
+sam deploy --parameter-overrides CleanupSchedule="cron(0 12 * * ? *)"
 ```
 
 ## Testing
@@ -145,6 +167,9 @@ Run tests using Maven:
 
 ```sh
 mvn test
+
+# Test with specific schedule locally
+sam local invoke -e events/schedule-test.json
 ```
 
 ## IAM Permissions
@@ -154,6 +179,7 @@ The function requires these AWS permissions:
 - SNS: Publish
 - CloudWatch: PutMetricData
 - CloudWatch Logs: CreateLogGroup, CreateLogStream, PutLogEvents
+- EventBridge: PutRule (for schedule configuration)
 
 ## Monitoring
 
