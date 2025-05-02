@@ -164,10 +164,7 @@ CloudWatch metrics (`S3DailyCleanup` namespace):
 
 ## 🌐 Configuration Web Interface
 
-Visit our web interface for easy configuration:
-```
-https://msjackiebrown.github.io/java-daily-cleanup-job/
-```
+Visit our [configuration web interface](https://msjackiebrown.github.io/java-aws-lambda-daily-cleanup-job/) for easy setup.
 
 Features:
 - 📝 Plain English schedule configuration
